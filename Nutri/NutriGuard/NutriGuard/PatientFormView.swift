@@ -2,7 +2,10 @@ import SwiftUI
 
 struct PatientFormView: View {
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var currentStep = 0
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     // Basic Information
     @State private var name = ""
@@ -138,12 +141,7 @@ struct PatientFormView: View {
                             })
                             
                             NavigationButton(title: "Finish", action: {
-                                // Navigate to HomeView
-                                let homeView = HomeView(userName: name)
-                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                   let window = windowScene.windows.first {
-                                    window.rootViewController = UIHostingController(rootView: homeView)
-                                }
+                                submitForm()
                             })
                         }
                     }
@@ -153,6 +151,36 @@ struct PatientFormView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .navigationBarTitle("NutriGuard", displayMode: .inline)
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+    
+    private func submitForm() {
+        // Update AuthViewModel's health profile with form data
+        authViewModel.userName = name
+        authViewModel.healthProfile.age = Int(age) ?? 0
+        authViewModel.healthProfile.gender = gender
+        authViewModel.healthProfile.chronicConditions = chronicConditions
+        authViewModel.healthProfile.foodAllergies = foodAllergies
+        authViewModel.healthProfile.medications = medications
+        authViewModel.healthProfile.dietType = dietType
+        authViewModel.healthProfile.permanentDislikes = permanentDislikes
+        authViewModel.healthProfile.activityLevel = activityLevel
+        authViewModel.healthProfile.longTermGoals = longTermGoals
+        
+        // Submit the form data to Supabase
+        authViewModel.submitHealthForm()
+        
+        // Navigate to HomeView
+        let homeView = HomeView()
+            .environmentObject(authViewModel)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.rootViewController = UIHostingController(rootView: homeView)
         }
     }
 }

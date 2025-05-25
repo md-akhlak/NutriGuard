@@ -58,28 +58,35 @@ class MenuImageProcessor {
         var menuItems: [MenuItem] = []
         var currentItem: (name: String, price: String, description: String)?
         
+        // First pass: Identify potential menu items and their prices
+        var potentialItems: [(name: String, price: String, description: String)] = []
+        
         for line in textLines {
             // Skip empty lines
             guard !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
             
             // Try to extract price
             if let price = extractPrice(from: line) {
+                // If we have a current item, save it
                 if let item = currentItem {
-                    // Create menu item with the collected information
-                    let menuItem = createMenuItem(
-                        name: item.name,
-                        price: price,
-                        description: item.description
-                    )
-                    menuItems.append(menuItem)
+                    potentialItems.append(item)
                 }
+                
                 // Start new item
-                currentItem = (name: line.replacingOccurrences(of: price, with: "").trimmingCharacters(in: .whitespacesAndNewlines),
-                             price: price,
-                             description: "")
+                let name = line.replacingOccurrences(of: price, with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+                currentItem = (name: name, price: price, description: "")
             } else if currentItem != nil {
-                // Add to description
-                currentItem?.description += line + " "
+                // Add to description if it looks like a description
+                let line = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !line.isEmpty && !line.contains("$") && !line.contains("€") && !line.contains("£") {
+                    currentItem?.description += line + " "
+                } else {
+                    // If the line contains a price or looks like a new item, save current and start new
+                    if let item = currentItem {
+                        potentialItems.append(item)
+                    }
+                    currentItem = (name: line, price: "", description: "")
+                }
             } else {
                 // Start new item without price
                 currentItem = (name: line, price: "", description: "")
@@ -88,11 +95,25 @@ class MenuImageProcessor {
         
         // Add the last item if exists
         if let item = currentItem {
+            potentialItems.append(item)
+        }
+        
+        // Second pass: Clean up and create menu items
+        for item in potentialItems {
+            // Skip items that are too short to be valid menu items
+            guard item.name.count > 2 else { continue }
+            
+            // Clean up the name and description
+            let cleanName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanDescription = item.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Create menu item
             let menuItem = createMenuItem(
-                name: item.name,
+                name: cleanName,
                 price: item.price,
-                description: item.description
+                description: cleanDescription
             )
+            
             menuItems.append(menuItem)
         }
         
@@ -106,7 +127,9 @@ class MenuImageProcessor {
             #"€\d+(\.\d{2})?"#,   // €10.99
             #"£\d+(\.\d{2})?"#,   // £10.99
             #"\d+(\.\d{2})?\s*(USD|EUR|GBP)"#,  // 10.99 USD
-            #"\d+(\.\d{2})?\s*(dollars|euros|pounds)"#  // 10.99 dollars
+            #"\d+(\.\d{2})?\s*(dollars|euros|pounds)"#,  // 10.99 dollars
+            #"\d+(\.\d{2})?\s*Rs"#,  // 10.99 Rs
+            #"\d+(\.\d{2})?\s*INR"#   // 10.99 INR
         ]
         
         for pattern in patterns {

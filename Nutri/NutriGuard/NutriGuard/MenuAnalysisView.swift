@@ -36,6 +36,26 @@ struct MenuItem: Identifiable {
     let dietaryBenefits: [String]
     let dietaryConcerns: [String]
     let alternativeOptions: [String]
+    
+    var healthStatus: String {
+        if healthScore >= 80 {
+            return "Healthy"
+        } else if healthScore >= 60 {
+            return "Moderate"
+        } else {
+            return "Unhealthy"
+        }
+    }
+    
+    var healthStatusColor: Color {
+        if healthScore >= 80 {
+            return .green
+        } else if healthScore >= 60 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
 }
 
 struct MenuAnalysisView: View {
@@ -43,15 +63,11 @@ struct MenuAnalysisView: View {
     let menuImage: UIImage
     @State private var menuItems: [MenuItem] = []
     @State private var isAnalyzing = true
-    @State private var selectedCuisine: String = "All"
-    @State private var selectedHealthFilter: String = "All"
     @State private var errorMessage: String?
-    let cuisines = ["All", "Italian", "Mexican", "Indian", "Chinese", "Japanese", "American"]
-    let healthFilters = ["All", "Diabetes", "Hypertension", "Heart Disease", "Gluten Sensitivity"]
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
+        NavigationView {
+            VStack(spacing: 0) {
                 // Header
                 VStack(spacing: 10) {
                     Text("Menu Analysis")
@@ -64,47 +80,6 @@ struct MenuAnalysisView: View {
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top)
-                
-                // Filters
-                VStack(spacing: 15) {
-                    // Cuisine Filter
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(cuisines, id: \.self) { cuisine in
-                                Button(action: {
-                                    selectedCuisine = cuisine
-                                }) {
-                                    Text(cuisine)
-                                        .padding(.horizontal, 15)
-                                        .padding(.vertical, 8)
-                                        .background(selectedCuisine == cuisine ? Color.red : Color.gray.opacity(0.2))
-                                        .foregroundColor(selectedCuisine == cuisine ? .white : .primary)
-                                        .cornerRadius(20)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Health Filter
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(healthFilters, id: \.self) { filter in
-                                Button(action: {
-                                    selectedHealthFilter = filter
-                                }) {
-                                    Text(filter)
-                                        .padding(.horizontal, 15)
-                                        .padding(.vertical, 8)
-                                        .background(selectedHealthFilter == filter ? Color.green : Color.gray.opacity(0.2))
-                                        .foregroundColor(selectedHealthFilter == filter ? .white : .primary)
-                                        .cornerRadius(20)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
                 
                 if isAnalyzing {
                     // Loading State
@@ -147,30 +122,20 @@ struct MenuAnalysisView: View {
                     }
                     .padding()
                 } else {
-                    // Menu Items
-                    LazyVStack(spacing: 15) {
-                        ForEach(filteredMenuItems) { item in
-                            MenuItemCard(item: item)
+                    // Menu Items Table
+                    List {
+                        ForEach(menuItems) { item in
+                            MenuItemRow(item: item)
                         }
                     }
-                    .padding(.horizontal)
+                    .listStyle(PlainListStyle())
                 }
             }
+            .navigationBarHidden(true)
         }
         .onAppear {
             analyzeMenu()
         }
-    }
-    
-    private var filteredMenuItems: [MenuItem] {
-        var filtered = menuItems
-        if selectedCuisine != "All" {
-            filtered = filtered.filter { $0.cuisine == selectedCuisine }
-        }
-        if selectedHealthFilter != "All" {
-            filtered = filtered.filter { $0.healthImpacts.contains { $0.condition == selectedHealthFilter } }
-        }
-        return filtered
     }
     
     private func analyzeMenu() {
@@ -190,191 +155,82 @@ struct MenuAnalysisView: View {
     }
 }
 
-struct MenuItemCard: View {
-    @Environment(\.colorScheme) var colorScheme
+struct MenuItemRow: View {
     let item: MenuItem
-    @State private var showHealthDetails = false
+    @State private var showDetails = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .font(.headline)
                     Text(item.cuisine)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                Spacer()
-                Text(item.price)
-                    .font(.headline)
-                    .foregroundColor(.red)
-            }
-            
-            // Rating and Health Score
-            HStack {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                    Text(String(format: "%.1f", item.rating))
-                }
                 
                 Spacer()
                 
-                HStack {
-                    Image(systemName: "heart.fill")
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(item.price)
+                        .font(.headline)
                         .foregroundColor(.red)
-                    Text("Health Score: \(item.healthScore)%")
+                    
+                    Text(item.healthStatus)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(item.healthStatusColor.opacity(0.2))
+                        .foregroundColor(item.healthStatusColor)
+                        .cornerRadius(8)
                 }
             }
             
-            // Allergens
-            if !item.allergens.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(item.allergens, id: \.self) { allergen in
-                            Text(allergen)
-                                .font(.caption)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.red.opacity(0.1))
-                                .foregroundColor(.red)
-                                .cornerRadius(10)
-                        }
-                    }
-                }
-            }
-            
-            // Nutritional Info
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Nutritional Information")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+            if showDetails {
+                Divider()
                 
+                // Health Score
                 HStack {
-                    ForEach(Array(item.nutritionalInfo.keys.sorted()), id: \.self) { key in
-                        VStack {
-                            Text(key)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(item.nutritionalInfo[key] ?? "")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        if key != item.nutritionalInfo.keys.sorted().last {
-                            Spacer()
-                        }
-                    }
-                }
-            }
-            
-            // Health Impact Button
-            Button(action: {
-                withAnimation {
-                    showHealthDetails.toggle()
-                }
-            }) {
-                HStack {
-                    Text("View Health Impact")
+                    Text("Health Score:")
                         .font(.subheadline)
-                        .fontWeight(.medium)
-                    Image(systemName: showHealthDetails ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                    Text("\(item.healthScore)%")
+                        .font(.subheadline)
+                        .foregroundColor(item.healthStatusColor)
                 }
-                .foregroundColor(.blue)
-            }
-            
-            if showHealthDetails {
-                // Health Impacts
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(item.healthImpacts) { impact in
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack {
-                                Text(impact.condition)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text(impact.severity.rawValue)
+                
+                // Allergens
+                if !item.allergens.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(item.allergens, id: \.self) { allergen in
+                                Text(allergen)
                                     .font(.caption)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(impact.severity.color.opacity(0.2))
-                                    .foregroundColor(impact.severity.color)
+                                    .background(Color.red.opacity(0.1))
+                                    .foregroundColor(.red)
                                     .cornerRadius(8)
                             }
-                            
-                            Text(impact.impact)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Text(impact.recommendation)
-                                .font(.caption)
-                                .foregroundColor(impact.severity.color)
                         }
-                        .padding(.vertical, 5)
                     }
                 }
-                .padding(.vertical, 5)
                 
-                // Dietary Benefits and Concerns
-                HStack(alignment: .top, spacing: 15) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Benefits")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        ForEach(item.dietaryBenefits, id: \.self) { benefit in
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text(benefit)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Concerns")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        ForEach(item.dietaryConcerns, id: \.self) { concern in
-                            HStack {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .foregroundColor(.orange)
-                                Text(concern)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 5)
-                
-                // Alternative Options
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Alternative Options")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    ForEach(item.alternativeOptions, id: \.self) { option in
-                        HStack {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .foregroundColor(.blue)
-                            Text(option)
-                                .font(.caption)
-                        }
-                    }
-                }
-                .padding(.vertical, 5)
+                // Recommendation
+                Text(item.recommendation)
+                    .font(.subheadline)
+                    .foregroundColor(item.healthStatusColor)
+                    .padding(.top, 4)
             }
-            
-            // Recommendation
-            Text(item.recommendation)
-                .font(.subheadline)
-                .foregroundColor(.green)
-                .padding(.top, 5)
         }
-        .padding()
-        .background(colorScheme == .dark ? Color(.systemGray6) : .white)
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation {
+                showDetails.toggle()
+            }
+        }
     }
 }
 
