@@ -68,26 +68,23 @@ class GeminiService {
             return createDefaultAnalysis(for: item)
         }
 
-        // Create nutritional estimates based on common values
-        let estimatedNutrition: [String: String] = [
-            "Calories": "300 kcal",
-            "Protein": "8 g",
-            "Carbs": "40 g",
-            "Fat": "12 g"
-        ]
-        
         let prompt = """
         Return ONLY a JSON response analyzing this menu item. No explanations or questions.
 
         ITEM DETAILS:
         Name: \(item.name)
         Description: \(item.description)
-        Estimated Nutrition: Calories: \(estimatedNutrition["Calories"] ?? "N/A"), Protein: \(estimatedNutrition["Protein"] ?? "N/A"), Carbs: \(estimatedNutrition["Carbs"] ?? "N/A"), Fat: \(estimatedNutrition["Fat"] ?? "N/A")
+        Cuisine: \(item.cuisine)
 
         USER PROFILE:
         Health Conditions: \(userProfile.chronicConditions.joined(separator: ", "))
         Allergies: \(userProfile.foodAllergies.joined(separator: ", "))
         Diet Type: \(userProfile.dietType ?? "None")
+
+        TASK:
+        1. Analyze the dish based on its name, description, and cuisine.
+        2. Provide accurate nutritional estimates based on standard serving size.
+        3. Consider cooking method, ingredients, and portion size.
 
         REQUIRED FORMAT:
         {
@@ -102,10 +99,13 @@ class GeminiService {
                 "alternative suggestion"
             ],
             "nutritionalInfo": {
-                "Calories": "300 kcal",
-                "Protein": "8 g",
-                "Carbs": "40 g",
-                "Fat": "12 g"
+                "Calories": "estimated calories based on ingredients and portion",
+                "Protein": "estimated protein content in grams",
+                "Carbs": "estimated carbohydrate content in grams",
+                "Fat": "estimated fat content in grams",
+                "Fiber": "estimated fiber content in grams",
+                "Sugar": "estimated sugar content in grams",
+                "Sodium": "estimated sodium content in mg"
             }
         }
         """
@@ -218,10 +218,13 @@ class GeminiService {
         )
         
         let nutritionalInfo: [String: String] = [
-            "Calories": "Temporarily unavailable",
-            "Protein": "Temporarily unavailable",
-            "Carbs": "Temporarily unavailable",
-            "Fat": "Temporarily unavailable"
+            "Calories": "Analysis needed",
+            "Protein": "Analysis needed",
+            "Carbs": "Analysis needed",
+            "Fat": "Analysis needed",
+            "Fiber": "Analysis needed",
+            "Sugar": "Analysis needed",
+            "Sodium": "Analysis needed"
         ]
         
         return (healthAnalysis, nutritionalInfo)

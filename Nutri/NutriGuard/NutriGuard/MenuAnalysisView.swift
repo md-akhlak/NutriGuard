@@ -291,13 +291,13 @@ struct MenuItemRow: View {
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 4) {
-                        Text(item.price)
+                        Text("")
                             .font(.headline)
                             .foregroundColor(.blue)
                         HStack {
-                            Image(systemName: "heart.fill")
+                            Image(systemName: "")
                                 .foregroundColor(.red)
-                            Text("\(item.healthScore)%")
+                            Text("")
                                 .font(.subheadline)
                         }
                     }

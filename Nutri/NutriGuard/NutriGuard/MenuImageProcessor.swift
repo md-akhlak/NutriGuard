@@ -325,35 +325,35 @@ class MenuImageProcessor {
         var score = 100
         let text = (name + " " + description).lowercased()
         
-        // Check for allergens
+        // More significant penalties for health concerns
         for allergen in profile.foodAllergies {
             if text.contains(allergen.lowercased()) {
-                score -= 30
+                score -= 50  // Increased penalty for allergens
             }
         }
         
-        // Check for chronic conditions
+        // Check for chronic conditions with stricter penalties
         for condition in profile.chronicConditions {
             switch condition.lowercased() {
             case "diabetes":
                 if text.contains("sugar") || text.contains("sweet") || text.contains("honey") {
-                    score -= 20
+                    score -= 40  // Increased penalty
                 }
                 if text.contains("whole grain") || text.contains("fiber") {
                     score += 10
                 }
             case "hypertension":
-                if text.contains("salt") || text.contains("sodium") {
-                    score -= 20
+                if text.contains("salt") || text.contains("sodium") || text.contains("soy sauce") {
+                    score -= 40  // Increased penalty
                 }
                 if text.contains("low sodium") || text.contains("unsalted") {
                     score += 10
                 }
             case "heart disease":
-                if text.contains("fried") || text.contains("fatty") {
-                    score -= 20
+                if text.contains("fried") || text.contains("fatty") || text.contains("cream") {
+                    score -= 40  // Increased penalty
                 }
-                if text.contains("grilled") || text.contains("baked") {
+                if text.contains("grilled") || text.contains("baked") || text.contains("steamed") {
                     score += 10
                 }
             default:
@@ -361,27 +361,26 @@ class MenuImageProcessor {
             }
         }
         
-        // Check for diet type
-        if let dietType = profile.dietType?.lowercased() {
-            switch dietType {
-            case "vegan":
-                if text.contains("meat") || text.contains("dairy") || text.contains("egg") {
-                    score -= 30
-                }
-            case "keto":
-                if text.contains("carb") || text.contains("sugar") || text.contains("bread") {
-                    score -= 20
-                }
-                if text.contains("fat") || text.contains("protein") {
-                    score += 10
-                }
-            case "low-sodium":
-                if text.contains("salt") || text.contains("sodium") {
-                    score -= 25
-                }
-            default:
-                break
-            }
+        // Additional penalties for unhealthy cooking methods
+        if text.contains("fried") || text.contains("deep fried") {
+            score -= 30
+        }
+        if text.contains("cream sauce") || text.contains("butter sauce") {
+            score -= 20
+        }
+        if text.contains("extra cheese") || text.contains("creamy") {
+            score -= 20
+        }
+        
+        // Bonuses for healthy ingredients
+        if text.contains("vegetable") || text.contains("salad") {
+            score += 15
+        }
+        if text.contains("lean") || text.contains("grilled") {
+            score += 10
+        }
+        if text.contains("whole grain") || text.contains("brown rice") {
+            score += 10
         }
         
         return max(0, min(100, score))
@@ -548,15 +547,23 @@ class MenuImageProcessor {
         guard let profile = userProfile else {
             return "Please complete your health profile for personalized recommendations"
         }
-        
+
         let healthScore = calculateHealthScore(for: name, description: description)
-        
-        if healthScore >= 80 {
+        let text = (name + " " + description).lowercased()
+
+        // Check for unhealthy indicators
+        let hasHighCalories = text.contains("fried") || text.contains("deep fried") || text.contains("crispy")
+        let hasHighSodium = text.contains("salt") || text.contains("soy sauce") || text.contains("sauce")
+        let hasHighFat = text.contains("cream") || text.contains("butter") || text.contains("cheese")
+        let hasHighSugar = text.contains("sweet") || text.contains("sugar") || text.contains("syrup")
+
+        // More strict health scoring
+        if healthScore >= 80 && !hasHighCalories && !hasHighSodium && !hasHighFat && !hasHighSugar {
             return "Excellent choice! This dish aligns well with your health profile."
         } else if healthScore >= 60 {
-            return "Good option, but consider portion size and preparation method."
+            return "Moderate choice - consider portion control and any modifications to make it healthier."
         } else {
-            return "This dish may not be the best choice for your health profile. Consider alternatives."
+            return "This dish may have nutritional concerns. Consider healthier alternatives or modifications."
         }
     }
     
