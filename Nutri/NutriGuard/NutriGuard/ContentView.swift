@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  NutriGuard
-//
-//  Created by $HahMa on 24/05/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -41,4 +34,4 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-}
+} 

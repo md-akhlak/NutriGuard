@@ -229,44 +229,4 @@ class GeminiService {
         
         return (healthAnalysis, nutritionalInfo)
     }
-}
-
-// Response models
-struct GeminiResponse: Codable {
-    let candidates: [Candidate]
-    
-    enum CodingKeys: String, CodingKey {
-        case candidates
-    }
-}
-
-struct Candidate: Codable {
-    let content: Content
-    
-    enum CodingKeys: String, CodingKey {
-        case content
-    }
-}
-
-struct Content: Codable {
-    let parts: [Part]
-    
-    enum CodingKeys: String, CodingKey {
-        case parts
-    }
-}
-
-struct Part: Codable {
-    let text: String
-    
-    enum CodingKeys: String, CodingKey {
-        case text
-    }
-}
-
-struct HealthAnalysis: Codable {
-    let isHealthy: Bool
-    let reason: String
-    let healthImpacts: [String]
-    let recommendations: [String]
 } 

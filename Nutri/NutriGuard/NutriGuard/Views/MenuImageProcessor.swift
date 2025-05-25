@@ -690,13 +690,3 @@ class MenuImageProcessor {
     }
 }
 
-// User Health Profile Structure
-struct UserHealthProfile: Codable {
-    let chronicConditions: [String]
-    let foodAllergies: [String]
-    let medications: [String]
-    let dietType: String?
-    let permanentDislikes: [String]
-    let activityLevel: String
-    let longTermGoals: [String]
-} 

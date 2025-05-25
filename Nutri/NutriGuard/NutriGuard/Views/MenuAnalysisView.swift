@@ -1,44 +1,5 @@
 import SwiftUI
 
-struct HealthImpact: Identifiable {
-    let id = UUID()
-    let condition: String
-    let impact: String
-    let recommendation: String
-    let severity: ImpactSeverity
-}
-
-enum ImpactSeverity: String {
-    case positive = "Positive"
-    case neutral = "Neutral"
-    case negative = "Negative"
-    
-    var color: Color {
-        switch self {
-        case .positive: return .green
-        case .neutral: return .orange
-        case .negative: return .red
-        }
-    }
-}
-
-struct MenuItem: Identifiable {
-    let id = UUID()
-    var name: String
-    var cuisine: String
-    var price: String
-    var description: String
-    var rating: Double
-    var healthScore: Int
-    var allergens: [String]
-    var nutritionalInfo: [String: String]
-    var recommendation: String
-    var healthImpacts: [HealthImpact]
-    var dietaryBenefits: [String]
-    var dietaryConcerns: [String]
-    var alternativeOptions: [String]
-}
-
 struct MenuAnalysisView: View {
     @Environment(\.colorScheme) var colorScheme
     let menuImage: UIImage
