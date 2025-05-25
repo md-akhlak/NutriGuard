@@ -6,12 +6,16 @@ class MenuImageProcessor {
     static let shared = MenuImageProcessor()
     
     // User's health profile
-    private var userProfile: UserHealthProfile?
+    private(set) var userProfile: UserHealthProfile?
     
     private init() {}
     
     func setUserProfile(_ profile: UserHealthProfile) {
         self.userProfile = profile
+    }
+    
+    func getUserProfile() -> UserHealthProfile? {
+        return userProfile
     }
     
     func processMenuImage(_ image: UIImage, completion: @escaping ([MenuItem]) -> Void) {
@@ -31,13 +35,22 @@ class MenuImageProcessor {
                 return
             }
             
-            // Process the recognized text
-            let recognizedStrings = observations.compactMap { observation in
-                observation.topCandidates(1).first?.string
+            // Sort observations by vertical position (top to bottom)
+            let sortedObservations = observations.sorted { obs1, obs2 in
+                obs1.boundingBox.origin.y > obs2.boundingBox.origin.y
             }
             
-            // Parse menu items from the recognized text
-            let menuItems = self?.parseMenuItems(from: recognizedStrings) ?? []
+            // Process the recognized text with position information
+            let recognizedStrings = sortedObservations.compactMap { observation -> (String, CGRect)? in
+                guard let text = observation.topCandidates(1).first?.string else { return nil }
+                return (text, observation.boundingBox)
+            }
+            
+            // Clean and filter the recognized text
+            let cleanedText = self?.cleanRecognizedText(recognizedStrings) ?? []
+            
+            // Parse menu items from the cleaned text
+            let menuItems = self?.parseMenuItems(from: cleanedText) ?? []
             completion(menuItems)
         }
         
@@ -54,11 +67,66 @@ class MenuImageProcessor {
         }
     }
     
-    private func parseMenuItems(from textLines: [String]) -> [MenuItem] {
+    private func cleanRecognizedText(_ textLines: [(String, CGRect)]) -> [(String, CGRect)] {
+        return textLines.compactMap { (text, position) -> (String, CGRect)? in
+            // Remove unwanted characters and clean the text
+            var cleanedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Skip if the text is too short (likely noise)
+            if cleanedText.count < 2 {
+                return nil
+            }
+            
+            // Remove common menu noise
+            let noisePatterns = [
+                #"\.{2,}"#,  // Multiple dots
+                #"^[•\-\*]+$"#,  // Lines of bullets
+                #"^[0-9]+$"#,  // Just numbers
+                #"^[A-Za-z]\.$"#,  // Single letter with dot
+                #"^[•\-\*]\s*$"#,  // Single bullet
+                #"^\s*[•\-\*]\s*$"#,  // Bullet with spaces
+                #"^[0-9]+\s*[A-Za-z]$"#,  // Number followed by letter
+                #"^[A-Za-z]\s*[0-9]+$"#,  // Letter followed by number
+                #"^[0-9]+\s*[•\-\*]$"#,  // Number followed by bullet
+                #"^[•\-\*]\s*[0-9]+$"#  // Bullet followed by number
+            ]
+            
+            for pattern in noisePatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                    cleanedText = regex.stringByReplacingMatches(
+                        in: cleanedText,
+                        options: [],
+                        range: NSRange(cleanedText.startIndex..., in: cleanedText),
+                        withTemplate: ""
+                    )
+                }
+            }
+            
+            // Clean up any remaining unwanted characters
+            cleanedText = cleanedText.replacingOccurrences(of: "•", with: "")
+                .replacingOccurrences(of: "·", with: "")
+                .replacingOccurrences(of: "…", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Skip if the text is empty after cleaning
+            if cleanedText.isEmpty {
+                return nil
+            }
+            
+            // Skip if the text is just numbers or starts with numbers
+            if cleanedText.range(of: #"^[0-9]+"#, options: .regularExpression) != nil {
+                return nil
+            }
+            
+            return (cleanedText, position)
+        }
+    }
+    
+    private func parseMenuItems(from textLines: [(String, CGRect)]) -> [MenuItem] {
         var menuItems: [MenuItem] = []
-        var currentItem: (name: String, price: String, description: String)?
+        var currentItem: (name: String, price: String, description: String, position: CGRect)?
         
-        for line in textLines {
+        for (line, position) in textLines {
             // Skip empty lines
             guard !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
             
@@ -73,16 +141,60 @@ class MenuImageProcessor {
                     )
                     menuItems.append(menuItem)
                 }
+                
+                // Clean the name by removing the price and any leading/trailing dots
+                let name = line.replacingOccurrences(of: price, with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: #"^\.+|\.+$"#, with: "", options: .regularExpression)
+                
+                // Skip if the name is just numbers or starts with numbers
+                if name.range(of: #"^[0-9]+"#, options: .regularExpression) != nil {
+                    continue
+                }
+                
                 // Start new item
-                currentItem = (name: line.replacingOccurrences(of: price, with: "").trimmingCharacters(in: .whitespacesAndNewlines),
-                             price: price,
-                             description: "")
-            } else if currentItem != nil {
-                // Add to description
-                currentItem?.description += line + " "
+                currentItem = (
+                    name: name,
+                    price: price,
+                    description: "",
+                    position: position
+                )
+            } else if let current = currentItem {
+                // Check if this line is part of the current item or a new item
+                if isPartOfCurrentItem(currentPosition: position, previousPosition: current.position) {
+                    // Clean the description line
+                    let cleanedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .replacingOccurrences(of: #"^\.+|\.+$"#, with: "", options: .regularExpression)
+                    
+                    // Skip if the line is just numbers
+                    if cleanedLine.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil {
+                        continue
+                    }
+                    
+                    // Add to description if not empty
+                    if !cleanedLine.isEmpty {
+                        currentItem?.description += cleanedLine + " "
+                    }
+                } else {
+                    // Create menu item with the collected information
+                    let menuItem = createMenuItem(
+                        name: current.name,
+                        price: current.price,
+                        description: current.description
+                    )
+                    menuItems.append(menuItem)
+                    
+                    // Start new item
+                    currentItem = (name: line, price: "", description: "", position: position)
+                }
             } else {
+                // Skip if the line is just numbers
+                if line.range(of: #"^[0-9]+$"#, options: .regularExpression) != nil {
+                    continue
+                }
+                
                 // Start new item without price
-                currentItem = (name: line, price: "", description: "")
+                currentItem = (name: line, price: "", description: "", position: position)
             }
         }
         
@@ -96,7 +208,59 @@ class MenuImageProcessor {
             menuItems.append(menuItem)
         }
         
-        return menuItems
+        // Filter out any items that are likely not food items
+        return menuItems.filter { item in
+            !isLikelyNotFoodItem(item.name)
+        }
+    }
+    
+    private func isLikelyNotFoodItem(_ text: String) -> Bool {
+        // Patterns that indicate the text is likely not a food item
+        let nonFoodPatterns = [
+            #"^[0-9]+$"#,  // Just numbers
+            #"^[A-Za-z]\.$"#,  // Single letter with dot
+            #"^[•\-\*]+$"#,  // Just bullets
+            #"^[A-Za-z]$"#,  // Single letter
+            #"^[0-9]+\s*[A-Za-z]$"#,  // Number followed by single letter
+            #"^[A-Za-z]\s*[0-9]+$"#,  // Single letter followed by number
+            #"^[•\-\*]\s*[A-Za-z0-9]$"#,  // Bullet followed by letter/number
+            #"^[A-Za-z0-9]\s*[•\-\*]$"#,  // Letter/number followed by bullet
+            #"^[0-9]+\s*[•\-\*]$"#,  // Number followed by bullet
+            #"^[•\-\*]\s*[0-9]+$"#,  // Bullet followed by number
+            #"^[0-9]+[A-Za-z]$"#,  // Number followed by letter
+            #"^[A-Za-z][0-9]+$"#  // Letter followed by number
+        ]
+        
+        for pattern in nonFoodPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []),
+               regex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) != nil {
+                return true
+            }
+        }
+        
+        // Check if the text is too short to be a food item
+        if text.count < 3 {
+            return true
+        }
+        
+        // Check if the text starts with numbers
+        if text.range(of: #"^[0-9]+"#, options: .regularExpression) != nil {
+            return true
+        }
+        
+        return false
+    }
+    
+    private func isPartOfCurrentItem(currentPosition: CGRect, previousPosition: CGRect) -> Bool {
+        // Check if the current line is close to the previous line vertically
+        let verticalThreshold: CGFloat = 0.05 // Adjust this value based on your needs
+        let verticalDistance = abs(currentPosition.origin.y - previousPosition.origin.y)
+        
+        // Check if the current line is aligned with the previous line horizontally
+        let horizontalThreshold: CGFloat = 0.1 // Adjust this value based on your needs
+        let horizontalDistance = abs(currentPosition.origin.x - previousPosition.origin.x)
+        
+        return verticalDistance < verticalThreshold && horizontalDistance < horizontalThreshold
     }
     
     private func extractPrice(from text: String) -> String? {
@@ -106,7 +270,8 @@ class MenuImageProcessor {
             #"€\d+(\.\d{2})?"#,   // €10.99
             #"£\d+(\.\d{2})?"#,   // £10.99
             #"\d+(\.\d{2})?\s*(USD|EUR|GBP)"#,  // 10.99 USD
-            #"\d+(\.\d{2})?\s*(dollars|euros|pounds)"#  // 10.99 dollars
+            #"\d+(\.\d{2})?\s*(dollars|euros|pounds)"#,  // 10.99 dollars
+            #"\d+(\.\d{2})?"#  // 10.99
         ]
         
         for pattern in patterns {
@@ -141,6 +306,7 @@ class MenuImageProcessor {
             name: name,
             cuisine: cuisine,
             price: price,
+            description: description,
             rating: 0.0,
             healthScore: calculateHealthScore(for: name, description: description),
             allergens: detectAllergens(from: description),
@@ -492,7 +658,7 @@ class MenuImageProcessor {
 }
 
 // User Health Profile Structure
-struct UserHealthProfile {
+struct UserHealthProfile: Codable {
     let chronicConditions: [String]
     let foodAllergies: [String]
     let medications: [String]
