@@ -24,19 +24,19 @@ enum ImpactSeverity: String {
 
 struct MenuItem: Identifiable {
     let id = UUID()
-    let name: String
-    let cuisine: String
-    let price: String
-    let description: String
-    let rating: Double
-    let healthScore: Int
-    let allergens: [String]
-    let nutritionalInfo: [String: String]
-    let recommendation: String
-    let healthImpacts: [HealthImpact]
-    let dietaryBenefits: [String]
-    let dietaryConcerns: [String]
-    let alternativeOptions: [String]
+    var name: String
+    var cuisine: String
+    var price: String
+    var description: String
+    var rating: Double
+    var healthScore: Int
+    var allergens: [String]
+    var nutritionalInfo: [String: String]
+    var recommendation: String
+    var healthImpacts: [HealthImpact]
+    var dietaryBenefits: [String]
+    var dietaryConcerns: [String]
+    var alternativeOptions: [String]
 }
 
 struct MenuAnalysisView: View {
@@ -266,7 +266,7 @@ struct MenuItemsTable: View {
 }
 
 struct MenuItemRow: View {
-    let item: MenuItem
+    @State var item: MenuItem
     let isExpanded: Bool
     let onTap: () -> Void
     @State private var healthAnalysis: HealthAnalysis?
@@ -512,9 +512,12 @@ struct MenuItemRow: View {
         
         Task {
             do {
-                let analysis = try await GeminiService.shared.analyzeMenuItem(item, userProfile: userProfile)
+                let (analysis, nutritionalInfo) = try await GeminiService.shared.analyzeMenuItem(item, userProfile: userProfile)
                 await MainActor.run {
                     self.healthAnalysis = analysis
+                    var updatedItem = self.item
+                    updatedItem.nutritionalInfo = nutritionalInfo
+                    self.item = updatedItem
                     self.isLoadingAnalysis = false
                 }
             } catch {

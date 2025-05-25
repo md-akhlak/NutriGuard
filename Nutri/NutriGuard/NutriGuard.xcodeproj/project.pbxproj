@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B18CECF42DE31E2300E76728 /* NutriGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NutriGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C15F04F62DE328C400310237 /* NutriGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NutriGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,7 +33,7 @@
 			isa = PBXGroup;
 			children = (
 				B128CE702DE240CB00462278 /* NutriGuard */,
-				B18CECF42DE31E2300E76728 /* NutriGuard.app */,
+				C15F04F62DE328C400310237 /* NutriGuard.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -59,7 +59,7 @@
 			packageProductDependencies = (
 			);
 			productName = NutriGuard;
-			productReference = B18CECF42DE31E2300E76728 /* NutriGuard.app */;
+			productReference = C15F04F62DE328C400310237 /* NutriGuard.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

@@ -509,7 +509,33 @@ class MenuImageProcessor {
     }
     
     private func generateNutritionalInfo(for name: String, description: String) -> [String: String] {
-        // This would be replaced with actual nutritional analysis
+        // Use Gemini API to get nutritional info
+        guard let profile = userProfile else {
+            return [
+                "Calories": "N/A",
+                "Protein": "N/A",
+                "Carbs": "N/A",
+                "Fat": "N/A"
+            ]
+        }
+        
+        let menuItem = MenuItem(
+            name: name,
+            cuisine: detectCuisine(from: description),
+            price: "",
+            description: description,
+            rating: 0.0,
+            healthScore: 0,
+            allergens: [],
+            nutritionalInfo: [:],
+            recommendation: "",
+            healthImpacts: [],
+            dietaryBenefits: [],
+            dietaryConcerns: [],
+            alternativeOptions: []
+        )
+        
+        // Return placeholder values while analysis is in progress
         return [
             "Calories": "Analyzing...",
             "Protein": "Analyzing...",

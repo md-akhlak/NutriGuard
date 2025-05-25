@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DishAnalysisView: View {
-    let menuItem: MenuItem
+    @State var menuItem: MenuItem
     @State private var analysis: HealthAnalysis?
     @State private var isLoading = true
     @State private var error: Error?
@@ -200,15 +200,17 @@ struct DishAnalysisView: View {
         Task {
             do {
                 print("🤖 Calling Gemini API for analysis...")
-                let analysis = try await GeminiService.shared.analyzeMenuItem(menuItem, userProfile: userProfile)
+                let (analysis, nutritionalInfo) = try await GeminiService.shared.analyzeMenuItem(menuItem, userProfile: userProfile)
                 print("✅ Gemini API analysis completed successfully")
                 print("📝 Analysis result - Healthy: \(analysis.isHealthy)")
                 print("📝 Analysis reason: \(analysis.reason)")
                 print("📝 Health impacts: \(analysis.healthImpacts)")
                 print("📝 Recommendations: \(analysis.recommendations)")
+                print("📝 Nutritional info: \(nutritionalInfo)")
                 
                 await MainActor.run {
                     self.analysis = analysis
+                    self.menuItem.nutritionalInfo = nutritionalInfo
                     self.isLoading = false
                 }
             } catch {
