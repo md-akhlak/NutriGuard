@@ -559,11 +559,11 @@ class MenuImageProcessor {
 
         // More strict health scoring
         if healthScore >= 80 && !hasHighCalories && !hasHighSodium && !hasHighFat && !hasHighSugar {
-            return "Excellent choice! This dish aligns well with your health profile."
+            return ""
         } else if healthScore >= 60 {
-            return "Moderate choice - consider portion control and any modifications to make it healthier."
+            return ""
         } else {
-            return "This dish may have nutritional concerns. Consider healthier alternatives or modifications."
+            return ""
         }
     }
     
