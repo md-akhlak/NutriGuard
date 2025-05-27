@@ -38,96 +38,96 @@ struct PatientFormView: View {
     @State private var longTermGoals: [String] = []
     
     // Validation Functions
-    private func validateBasicInfo() -> Bool {
-        // Name validation
-        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            validationMessage = "Please enter your name"
-            showValidationAlert = true
-            return false
-        }
-        
-        // Age validation
-        if age.isEmpty {
-            validationMessage = "Please enter your age"
-            showValidationAlert = true
-            return false
-        }
-        
-        if let ageInt = Int(age) {
-            if ageInt < 0 || ageInt > 120 {
-                validationMessage = "Please enter a valid age between 0 and 120"
-                showValidationAlert = true
-                return false
-            }
-        } else {
-            validationMessage = "Please enter a valid age"
-            showValidationAlert = true
-            return false
-        }
-        
-        // Gender validation
-        if gender.isEmpty {
-            validationMessage = "Please select your gender"
-            showValidationAlert = true
-            return false
-        }
-        
-        return true
-    }
-    
-    private func validateMedicalProfile() -> Bool {
-        // At least one chronic condition should be selected (including "None")
-        if chronicConditions.isEmpty {
-            validationMessage = "Please select at least one option for chronic conditions"
-            showValidationAlert = true
-            return false
-        }
-        
-        // At least one food allergy should be selected (including "None")
-        if foodAllergies.isEmpty {
-            validationMessage = "Please select at least one option for food allergies"
-            showValidationAlert = true
-            return false
-        }
-        
-        // At least one medication should be selected (including "None")
-        if medications.isEmpty {
-            validationMessage = "Please select at least one option for medications"
-            showValidationAlert = true
-            return false
-        }
-        
-        return true
-    }
-    
-    private func validateDietaryPreferences() -> Bool {
-        // Diet type validation
-        if dietType.isEmpty {
-            validationMessage = "Please select a diet type"
-            showValidationAlert = true
-            return false
-        }
-        
-        return true
-    }
-    
-    private func validateLifestyle() -> Bool {
-        // Activity level validation
-        if activityLevel.isEmpty {
-            validationMessage = "Please select an activity level"
-            showValidationAlert = true
-            return false
-        }
-        
-        // Long-term goals validation
-        if longTermGoals.isEmpty {
-            validationMessage = "Please select at least one long-term goal"
-            showValidationAlert = true
-            return false
-        }
-        
-        return true
-    }
+    //    private func validateBasicInfo() -> Bool {
+    //        // Name validation
+    //        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    //            validationMessage = "Please enter your name"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        // Age validation
+    //        if age.isEmpty {
+    //            validationMessage = "Please enter your age"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        if let ageInt = Int(age) {
+    //            if ageInt < 0 || ageInt > 120 {
+    //                validationMessage = "Please enter a valid age between 0 and 120"
+    //                showValidationAlert = true
+    //                return false
+    //            }
+    //        } else {
+    //            validationMessage = "Please enter a valid age"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        // Gender validation
+    //        if gender.isEmpty {
+    //            validationMessage = "Please select your gender"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        return true
+    //    }
+    //
+    //    private func validateMedicalProfile() -> Bool {
+    //        // At least one chronic condition should be selected (including "None")
+    //        if chronicConditions.isEmpty {
+    //            validationMessage = "Please select at least one option for chronic conditions"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        // At least one food allergy should be selected (including "None")
+    //        if foodAllergies.isEmpty {
+    //            validationMessage = "Please select at least one option for food allergies"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        // At least one medication should be selected (including "None")
+    //        if medications.isEmpty {
+    //            validationMessage = "Please select at least one option for medications"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        return true
+    //    }
+    //
+    //    private func validateDietaryPreferences() -> Bool {
+    //        // Diet type validation
+    //        if dietType.isEmpty {
+    //            validationMessage = "Please select a diet type"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        return true
+    //    }
+    //
+    //    private func validateLifestyle() -> Bool {
+    //        // Activity level validation
+    //        if activityLevel.isEmpty {
+    //            validationMessage = "Please select an activity level"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        // Long-term goals validation
+    //        if longTermGoals.isEmpty {
+    //            validationMessage = "Please select at least one long-term goal"
+    //            showValidationAlert = true
+    //            return false
+    //        }
+    //
+    //        return true
+    //    }
     
     var body: some View {
         NavigationView {
@@ -173,11 +173,9 @@ struct PatientFormView: View {
                             Spacer()
                             
                             NavigationButton(title: "Next", action: {
-                                if validateBasicInfo() {
-                                    focusedField = nil
-                                    withAnimation {
-                                        currentStep = 1
-                                    }
+                                focusedField = nil
+                                withAnimation {
+                                    currentStep = 1
                                 }
                             })
                         }
@@ -202,13 +200,10 @@ struct PatientFormView: View {
                                         currentStep = 0
                                     }
                                 })
-                                
                                 NavigationButton(title: "Next", action: {
-                                    if validateMedicalProfile() {
                                         withAnimation {
                                             currentStep = 2
                                         }
-                                    }
                                 })
                             }
                         }
@@ -234,11 +229,11 @@ struct PatientFormView: View {
                                 })
                                 
                                 NavigationButton(title: "Next", action: {
-                                    if validateDietaryPreferences() {
-                                        withAnimation {
-                                            currentStep = 3
-                                        }
+                                    
+                                    withAnimation {
+                                        currentStep = 3
                                     }
+                                    
                                 })
                             }
                         }
@@ -264,13 +259,11 @@ struct PatientFormView: View {
                                 })
                                 
                                 NavigationButton(title: "Finish", action: {
-                                    if validateLifestyle() {
-                                        // Navigate to HomeView
-                                        let homeView = HomeView(userName: name)
-                                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                           let window = windowScene.windows.first {
-                                            window.rootViewController = UIHostingController(rootView: homeView)
-                                        }
+                                    // Navigate to HomeView
+                                    let homeView = HomeView(userName: name)
+                                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                       let window = windowScene.windows.first {
+                                        window.rootViewController = UIHostingController(rootView: homeView)
                                     }
                                 })
                             }
@@ -300,4 +293,4 @@ struct PatientFormView: View {
 
 #Preview {
     PatientFormView()
-} 
+}
