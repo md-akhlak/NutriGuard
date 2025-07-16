@@ -18,52 +18,56 @@ class MenuImageProcessor {
         return userProfile
     }
     
-    func processMenuImage(_ image: UIImage, completion: @escaping ([MenuItem]) -> Void) {
+    func processMenuImage(_ image: UIImage) async throws -> [MenuItem] {
         guard let cgImage = image.cgImage else {
-            completion([])
-            return
+            return []
         }
         
-        // Create a new image-request handler
-        let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        
-        // Create a text recognition request
-        let request = VNRecognizeTextRequest { [weak self] request, error in
-            guard let observations = request.results as? [VNRecognizedTextObservation],
-                  error == nil else {
-                completion([])
-                return
+        return try await withCheckedThrowingContinuation { continuation in
+            // Create a new image-request handler
+            let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            
+            // Create a text recognition request
+            let request = VNRecognizeTextRequest { [weak self] request, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    continuation.resume(returning: [])
+                    return
+                }
+                
+                // Sort observations by vertical position (top to bottom)
+                let sortedObservations = observations.sorted { obs1, obs2 in
+                    obs1.boundingBox.origin.y > obs2.boundingBox.origin.y
+                }
+                
+                // Process the recognized text with position information
+                let recognizedStrings = sortedObservations.compactMap { observation -> (String, CGRect)? in
+                    guard let text = observation.topCandidates(1).first?.string else { return nil }
+                    return (text, observation.boundingBox)
+                }
+                
+                // Clean and filter the recognized text
+                let cleanedText = self?.cleanRecognizedText(recognizedStrings) ?? []
+                
+                // Parse menu items from the cleaned text
+                let menuItems = self?.parseMenuItems(from: cleanedText) ?? []
+                continuation.resume(returning: menuItems)
             }
             
-            // Sort observations by vertical position (top to bottom)
-            let sortedObservations = observations.sorted { obs1, obs2 in
-                obs1.boundingBox.origin.y > obs2.boundingBox.origin.y
+            // Configure the text recognition request
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.recognitionLanguages = ["en-US", "es-ES", "fr-FR", "it-IT", "de-DE", "ja-JP", "zh-Hans", "zh-Hant", "ko-KR", "hi-IN", "ar-SA"]
+            
+            do {
+                try requestHandler.perform([request])
+            } catch {
+                continuation.resume(throwing: error)
             }
-            
-            // Process the recognized text with position information
-            let recognizedStrings = sortedObservations.compactMap { observation -> (String, CGRect)? in
-                guard let text = observation.topCandidates(1).first?.string else { return nil }
-                return (text, observation.boundingBox)
-            }
-            
-            // Clean and filter the recognized text
-            let cleanedText = self?.cleanRecognizedText(recognizedStrings) ?? []
-            
-            // Parse menu items from the cleaned text
-            let menuItems = self?.parseMenuItems(from: cleanedText) ?? []
-            completion(menuItems)
-        }
-        
-        // Configure the text recognition request
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-        request.recognitionLanguages = ["en-US", "es-ES", "fr-FR", "it-IT", "de-DE", "ja-JP", "zh-Hans", "zh-Hant", "ko-KR", "hi-IN", "ar-SA"]
-        
-        do {
-            try requestHandler.perform([request])
-        } catch {
-            print("Failed to perform text recognition: \(error)")
-            completion([])
         }
     }
     

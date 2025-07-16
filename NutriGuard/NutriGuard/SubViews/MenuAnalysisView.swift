@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MenuAnalysisView: View {
+    @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     let menuImage: UIImage
     @State private var menuItems: [MenuItem] = []
@@ -13,111 +14,184 @@ struct MenuAnalysisView: View {
     let cuisines = ["All", "Italian", "Mexican", "Indian", "Chinese", "Japanese", "American"]
     let healthFilters = ["All", "Diabetes", "Hypertension", "Heart Disease", "Gluten Sensitivity"]
     
+    var filteredItems: [MenuItem] {
+        var items = menuItems
+        
+        // Apply cuisine filter
+        if selectedCuisine != "All" {
+            items = items.filter { $0.cuisine == selectedCuisine }
+        }
+        
+        // Apply search text
+        if !searchText.isEmpty {
+            items = items.filter { $0.name.lowercased().contains(searchText.lowercased()) }
+        }
+        
+        return items
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 10) {
-                Text("Menu Analysis")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                Text("Personalized recommendations based on your health profile")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.top)
-            
-            // Profile Setup Button
-            if UserProfileManager.shared.userProfile == nil {
-                Button(action: {
-                    showProfileSetup = true
-                }) {
-                    HStack {
-                        Image(systemName: "person.crop.circle.badge.exclamationmark")
-                        Text("Set Up Health Profile")
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Search Bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.gray)
+                    TextField("Search menu items...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
                 }
                 .padding()
-            }
-            
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
-                TextField("Search menu items...", text: $searchText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-            }
-            .padding(.horizontal)
-            .padding(.top, 10)
-            
-            // Filters
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(cuisines, id: \.self) { cuisine in
-                        FilterButton(title: cuisine, isSelected: selectedCuisine == cuisine) {
-                            selectedCuisine = cuisine
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .padding()
+                
+                // Cuisine Filter
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(cuisines, id: \.self) { cuisine in
+                            FilterButton(title: cuisine, isSelected: selectedCuisine == cuisine) {
+                                withAnimation {
+                                    selectedCuisine = cuisine
+                                }
+                            }
                         }
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
+                .padding(.vertical, 5)
+                
+                if isAnalyzing {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Analyzing menu items...")
+                            .font(.headline)
+                        Text("This may take a moment")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = errorMessage {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.red)
+                            .padding()
+                        Text(error)
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 15) {
+                            ForEach(filteredItems) { item in
+                                NavigationLink(destination: DishAnalysisView(menuItem: item)) {
+                                    MenuItemCard(item: item)
+                                }
+                            }
+                        }
+                        .padding()
+                    }
+                }
             }
-            .padding(.vertical, 10)
-            
-            if isAnalyzing {
-                LoadingView()
-            } else if let error = errorMessage {
-                ErrorView(error: error, retryAction: analyzeMenu)
-            } else if menuItems.isEmpty {
-                EmptyStateView()
-            } else {
-                MenuItemsTable(items: filteredMenuItems)
-            }
-        }
-        .sheet(isPresented: $showProfileSetup) {
-            ProfileSetupView()
+            .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
-            // Set up default profile if none exists
-            if UserProfileManager.shared.userProfile == nil {
-                UserProfileManager.shared.setupDefaultProfile()
-            }
-            analyzeMenu()
-        }
-    }
-    
-    private var filteredMenuItems: [MenuItem] {
-        var filtered = menuItems
-        if selectedCuisine != "All" {
-            filtered = filtered.filter { $0.cuisine == selectedCuisine }
-        }
-        if selectedHealthFilter != "All" {
-            filtered = filtered.filter { $0.healthImpacts.contains { $0.condition == selectedHealthFilter } }
-        }
-        if !searchText.isEmpty {
-            filtered = filtered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
-        return filtered
-    }
-    
-    private func analyzeMenu() {
-        isAnalyzing = true
-        errorMessage = nil
-        
-        MenuImageProcessor.shared.processMenuImage(menuImage) { items in
-            DispatchQueue.main.async {
-                isAnalyzing = false
-                if items.isEmpty {
-                    errorMessage = "Unable to detect menu items. Please ensure the menu is clearly visible and well-lit."
-                } else {
+            // Start menu analysis
+            Task {
+                do {
+                    let processor = MenuImageProcessor.shared
+                    let items = try await processor.processMenuImage(menuImage)
                     menuItems = items
+                    isAnalyzing = false
+                } catch {
+                    errorMessage = "Failed to analyze menu. Please try again."
+                    isAnalyzing = false
                 }
             }
         }
+    }
+}
+
+struct MenuItemCard: View {
+    let item: MenuItem
+    @Environment(\.colorScheme) var colorScheme
+    @State private var isLoading = true
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(item.name)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(item.cuisine)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 18) {
+                    if item.nutritionalInfo["Calories"] == nil || item.nutritionalInfo["Calories"] == "Analyzing..." {
+                        ShimmerBadge(icon: "flame.fill", unit: "cal")
+                        ShimmerBadge(icon: "chart.pie.fill", unit: "g")
+                        ShimmerBadge(icon: "leaf.fill", unit: "g")
+                    } else {
+                        NutritionBadge(icon: "flame.fill", value: item.nutritionalInfo["Calories"] ?? "-", unit: "cal")
+                        NutritionBadge(icon: "chart.pie.fill", value: item.nutritionalInfo["Protein"] ?? "-", unit: "g")
+                        NutritionBadge(icon: "leaf.fill", value: item.nutritionalInfo["Carbs"] ?? "-", unit: "g")
+                    }
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(.secondary)
+                .font(.system(size: 18, weight: .semibold))
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
+        )
+        .padding(.vertical, 6)
+        .animation(.easeInOut, value: item.nutritionalInfo)
+    }
+}
+
+struct ShimmerBadge: View {
+    let icon: String
+    let unit: String
+    @State private var shimmer = false
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .foregroundStyle(.red.gradient)
+                .opacity(shimmer ? 0.5 : 1)
+                .animation(Animation.linear(duration: 1).repeatForever(autoreverses: true), value: shimmer)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 40, height: 12)
+                .shimmering(active: shimmer)
+            Text(unit)
+                .foregroundColor(.secondary)
+        }
+        .font(.caption)
+        .onAppear { shimmer = true }
+    }
+}
+
+extension View {
+    func shimmering(active: Bool) -> some View {
+        self.overlay(
+            GeometryReader { geometry in
+                if active {
+                    LinearGradient(gradient: Gradient(colors: [Color.clear, Color.white.opacity(0.6), Color.clear]), startPoint: .leading, endPoint: .trailing)
+                        .rotationEffect(.degrees(30))
+                        .offset(x: active ? geometry.size.width : -geometry.size.width)
+                        .animation(Animation.linear(duration: 1.2).repeatForever(autoreverses: false), value: active)
+                }
+            }
+        )
     }
 }
 
@@ -129,11 +203,13 @@ struct FilterButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
+                .fontWeight(isSelected ? .bold : .regular)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(isSelected ? Color.red.gradient : Color.gray.opacity(0.15).gradient)
                 .foregroundColor(isSelected ? .white : .primary)
-                .cornerRadius(20)
+                .clipShape(Capsule())
+                .shadow(color: isSelected ? .red.opacity(0.18) : .clear, radius: 6, x: 0, y: 3)
         }
     }
 }
@@ -166,9 +242,9 @@ struct ErrorView: View {
                 retryAction()
             }
             .padding()
-            .background(Color.blue)
+            .background(Color.blue.gradient)
             .foregroundColor(.white)
-            .cornerRadius(10)
+            .clipShape(Capsule())
         }
         .padding()
     }
@@ -196,298 +272,95 @@ struct MenuItemsTable: View {
     @State private var selectedItem: MenuItem?
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 15) {
-                ForEach(items) { item in
-                    MenuItemRow(item: item, isExpanded: expandedItem?.id == item.id) {
-                        withAnimation {
-                            if expandedItem?.id == item.id {
-                                expandedItem = nil
-                            } else {
-                                expandedItem = item
-                            }
-                        }
-                    }
-                    .onTapGesture {
-                        selectedItem = item
-                    }
+        LazyVStack(spacing: 15) {
+            ForEach(items) { item in
+                NavigationLink(destination: DishAnalysisView(menuItem: item)) {
+                    MenuItemRow(item: item)
                 }
             }
-            .padding()
         }
-        .sheet(item: $selectedItem) { item in
-            NavigationView {
-                DishAnalysisView(menuItem: item)
-                    .navigationBarItems(trailing: Button("Done") {
-                        selectedItem = nil
-                    })
-            }
-        }
+        .padding()
     }
 }
 
 struct MenuItemRow: View {
-    @State var item: MenuItem
-    let isExpanded: Bool
-    let onTap: () -> Void
-    @State private var healthAnalysis: HealthAnalysis?
-    @State private var isLoadingAnalysis = false
-    @State private var analysisError: Error?
+    let item: MenuItem
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header Row
-            Button(action: onTap) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.name)
-                            .font(.headline)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Text(item.cuisine)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                        HStack {
-                            Image(systemName: "")
-                                .foregroundColor(.red)
-                            Text("")
-                                .font(.subheadline)
-                        }
-                    }
-                    
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.gray)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text(item.cuisine)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                .padding()
-                .background(Color(.systemBackground))
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
             }
             
-            if isExpanded {
-                Divider()
-                
-                // Expanded Content
-                VStack(alignment: .leading, spacing: 15) {
-                    // Health Analysis Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Health Analysis")
-                            .font(.headline)
-                        
-                        if isLoadingAnalysis {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        } else if let error = analysisError {
-                            Text("Error analyzing health impact: \(error.localizedDescription)")
-                                .foregroundColor(.red)
-                                .font(.caption)
-                        } else if let analysis = healthAnalysis {
-                            HStack {
-                                Image(systemName: analysis.isHealthy ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundColor(analysis.isHealthy ? .green : .red)
-                                Text(analysis.isHealthy ? "Healthy" : "Unhealthy")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(analysis.isHealthy ? .green : .red)
-                            }
-                            
-                            Text(analysis.reason)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            if !analysis.healthImpacts.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Health Impacts:")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    ForEach(analysis.healthImpacts, id: \.self) { impact in
-                                        HStack {
-                                            Image(systemName: "exclamationmark.circle.fill")
-                                                .foregroundColor(.orange)
-                                            Text(impact)
-                                                .font(.caption)
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if !analysis.recommendations.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Recommendations:")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    ForEach(analysis.recommendations, id: \.self) { recommendation in
-                                        HStack {
-                                            Image(systemName: "arrow.right.circle.fill")
-                                                .foregroundColor(.blue)
-                                            Text(recommendation)
-                                                .font(.caption)
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            Button("Analyze Health Impact") {
-                                analyzeHealthImpact()
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    
-                    // Allergens
-                    if !item.allergens.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(item.allergens, id: \.self) { allergen in
-                                    Text(allergen)
-                                        .font(.caption)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(Color.red.opacity(0.1))
-                                        .foregroundColor(.red)
-                                        .cornerRadius(10)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Nutritional Info
+            if !item.allergens.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
-                        ForEach(Array(item.nutritionalInfo.keys.sorted()), id: \.self) { key in
-                            VStack {
-                                Text(key)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(item.nutritionalInfo[key] ?? "")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            if key != item.nutritionalInfo.keys.sorted().last {
-                                Spacer()
-                            }
-                        }
-                    }
-                    
-                    // Health Impacts
-                    ForEach(item.healthImpacts) { impact in
-                        VStack(alignment: .leading, spacing: 5) {
+                        ForEach(item.allergens, id: \.self) { allergen in
                             HStack {
-                                Text(impact.condition)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text(impact.severity.rawValue)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(impact.severity.color.opacity(0.2))
-                                    .foregroundColor(impact.severity.color)
-                                    .cornerRadius(8)
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                                Text(allergen)
                             }
-                            Text(impact.impact)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(impact.recommendation)
-                                .font(.caption)
-                                .foregroundColor(impact.severity.color)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.1))
+                            .foregroundColor(.red)
+                            .clipShape(Capsule())
                         }
                     }
-                    
-                    // Benefits and Concerns
-                    HStack(alignment: .top, spacing: 15) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Benefits")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            ForEach(item.dietaryBenefits, id: \.self) { benefit in
-                                HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                    Text(benefit)
-                                        .font(.caption)
-                                }
-                            }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Concerns")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            ForEach(item.dietaryConcerns, id: \.self) { concern in
-                                HStack {
-                                    Image(systemName: "exclamationmark.circle.fill")
-                                        .foregroundColor(.orange)
-                                    Text(concern)
-                                        .font(.caption)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Alternative Options
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Alternative Options")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        ForEach(item.alternativeOptions, id: \.self) { option in
-                            HStack {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .foregroundColor(.blue)
-                                Text(option)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    
-                    // Recommendation
-                    Text(item.recommendation)
-                        .font(.subheadline)
-                        .foregroundColor(.green)
                 }
-                .padding()
-                .background(Color(.systemGray6))
+            }
+            
+            // Quick Nutritional Info
+            if !item.nutritionalInfo.isEmpty {
+                HStack(spacing: 15) {
+                    if let calories = item.nutritionalInfo["Calories"] {
+                        NutritionBadge(icon: "flame.fill", value: calories, unit: "cal")
+                    }
+                    if let protein = item.nutritionalInfo["Protein"] {
+                        NutritionBadge(icon: "figure.strengthtraining", value: protein, unit: "g")
+                    }
+                    if let carbs = item.nutritionalInfo["Carbs"] {
+                        NutritionBadge(icon: "leaf.fill", value: carbs, unit: "g")
+                    }
+                }
             }
         }
+        .padding()
         .background(Color(.systemBackground))
-        .cornerRadius(15)
+        .clipShape(RoundedRectangle(cornerRadius: 15))
         .shadow(radius: 5)
     }
+}
+
+struct NutritionBadge: View {
+    let icon: String
+    let value: String
+    let unit: String
     
-    private func analyzeHealthImpact() {
-        guard let userProfile = MenuImageProcessor.shared.userProfile else {
-            analysisError = NSError(domain: "MenuItemRow", code: -1, userInfo: [NSLocalizedDescriptionKey: "User profile not found. Please complete your health profile first."])
-            return
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .foregroundStyle(.red.gradient)
+            Text(value)
+                .fontWeight(.medium)
+            Text(unit)
+                .foregroundColor(.secondary)
         }
-        
-        isLoadingAnalysis = true
-        analysisError = nil
-        
-        Task {
-            do {
-                let (analysis, nutritionalInfo) = try await GeminiService.shared.analyzeMenuItem(item, userProfile: userProfile)
-                await MainActor.run {
-                    self.healthAnalysis = analysis
-                    var updatedItem = self.item
-                    updatedItem.nutritionalInfo = nutritionalInfo
-                    self.item = updatedItem
-                    self.isLoadingAnalysis = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.analysisError = error
-                    self.isLoadingAnalysis = false
-                }
-            }
-        }
+        .font(.caption)
     }
 }
 

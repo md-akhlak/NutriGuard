@@ -9,17 +9,22 @@ struct DishAnalysisView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 28) {
                 // Header
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Text(menuItem.name)
-                        .font(.title)
+                        .font(.largeTitle)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
-                    
-                    Text(menuItem.cuisine)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .animation(.easeInOut(duration: 0.5), value: menuItem.name)
+                    HStack(spacing: 8) {
+                        Image(systemName: "fork.knife")
+                            .foregroundStyle(.red.gradient)
+                        Text(menuItem.cuisine)
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .padding(.top)
                 
@@ -43,95 +48,128 @@ struct DishAnalysisView: View {
                     .padding()
                 } else if let analysis = analysis {
                     // Health Status Card
-                    VStack(spacing: 15) {
-                        HStack {
+                    VStack(spacing: 18) {
+                        HStack(spacing: 10) {
                             Image(systemName: analysis.isHealthy ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .font(.title)
-                                .foregroundColor(analysis.isHealthy ? .green : .red)
+                                .foregroundStyle(analysis.isHealthy ? Color.green.gradient : Color.red.gradient)
                             Text(analysis.isHealthy ? "Healthy Choice" : "Consider Alternatives")
-                                .font(.headline)
+                                .font(.title3)
+                                .fontWeight(.bold)
                                 .foregroundColor(analysis.isHealthy ? .green : .red)
                         }
-                        
                         Text(analysis.reason)
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(15)
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(analysis.isHealthy ? Color.green.opacity(0.08) : Color.red.opacity(0.08))
+                    )
+                    .transition(.opacity)
                     
                     // Health Impacts
                     if !analysis.healthImpacts.isEmpty {
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("Health Impacts")
-                                .font(.headline)
+                        VStack(alignment: .leading, spacing: 18) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "heart.fill")
+                                    .foregroundStyle(.red.gradient)
+                                Text("Health Impacts")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
                             
                             ForEach(analysis.healthImpacts, id: \.self) { impact in
-                                HStack(alignment: .top) {
+                                HStack(alignment: .top, spacing: 8) {
                                     Image(systemName: "exclamationmark.circle.fill")
-                                        .foregroundColor(.orange)
+                                        .foregroundStyle(.orange.gradient)
                                     Text(impact)
                                         .font(.body)
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(15)
+                        .padding(18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.orange.opacity(0.08))
+                        )
                     }
                     
                     // Recommendations
                     if !analysis.recommendations.isEmpty {
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("Recommendations")
-                                .font(.headline)
+                        VStack(alignment: .leading, spacing: 18) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .foregroundStyle(.yellow.gradient)
+                                Text("Recommendations")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
                             
                             ForEach(analysis.recommendations, id: \.self) { recommendation in
-                                HStack(alignment: .top) {
+                                HStack(alignment: .top, spacing: 8) {
                                     Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue.gradient)
                                     Text(recommendation)
                                         .font(.body)
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(15)
+                        .padding(18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.yellow.opacity(0.08))
+                        )
                     }
                     
                     // Allergens
                     if !menuItem.allergens.isEmpty {
                         VStack(alignment: .leading, spacing: 15) {
-                            Text("Allergens")
-                                .font(.headline)
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red.gradient)
+                                Text("Allergens")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack {
                                     ForEach(menuItem.allergens, id: \.self) { allergen in
-                                        Text(allergen)
-                                            .font(.subheadline)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.red.opacity(0.1))
-                                            .foregroundColor(.red)
-                                            .cornerRadius(10)
+                                        HStack {
+                                            Image(systemName: "allergens")
+                                                .foregroundColor(.red)
+                                            Text(allergen)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.red.opacity(0.1))
+                                        .foregroundColor(.red)
+                                        .clipShape(Capsule())
                                     }
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(15)
+                        .padding(18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.red.opacity(0.08))
+                        )
                     }
                     
                     // Nutritional Information
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Nutritional Information")
-                            .font(.headline)
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundStyle(.purple.gradient)
+                            Text("Nutritional Information")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
                         
                         LazyVGrid(columns: [
                             GridItem(.flexible()),
@@ -139,50 +177,92 @@ struct DishAnalysisView: View {
                         ], spacing: 15) {
                             ForEach(Array(menuItem.nutritionalInfo.keys.sorted()), id: \.self) { key in
                                 VStack {
-                                    Text(key)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                    HStack {
+                                        Image(systemName: nutritionIcon(for: key))
+                                            .foregroundStyle(nutritionColor(for: key).gradient)
+                                        Text(key)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
                                     Text(menuItem.nutritionalInfo[key] ?? "")
                                         .font(.headline)
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.purple.opacity(0.08))
+                                )
                             }
                         }
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(15)
+                    .padding(18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color.purple.opacity(0.08))
+                    )
                     
                     // Alternative Options
                     if !menuItem.alternativeOptions.isEmpty {
                         VStack(alignment: .leading, spacing: 15) {
-                            Text("Alternative Options")
-                                .font(.headline)
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.triangle.swap")
+                                    .foregroundStyle(.green.gradient)
+                                Text("Alternative Options")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
                             
                             ForEach(menuItem.alternativeOptions, id: \.self) { option in
                                 HStack {
                                     Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue.gradient)
                                     Text(option)
                                         .font(.body)
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(15)
+                        .padding(18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.green.opacity(0.08))
+                        )
                     }
                 }
             }
             .padding()
+            .animation(.easeInOut(duration: 0.5), value: isLoading)
         }
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             print("🔍 DishAnalysisView appeared for dish: \(menuItem.name)")
             analyzeDish()
+        }
+    }
+    
+    private func nutritionIcon(for key: String) -> String {
+        switch key.lowercased() {
+        case "calories": return "flame.fill"
+        case "protein": return "figure.strengthtraining"
+        case "carbs": return "leaf.fill"
+        case "fat": return "drop.fill"
+        case "fiber": return "chart.line.uptrend.xyaxis"
+        case "sugar": return "cube.fill"
+        case "sodium": return "salt.fill"
+        default: return "circle.fill"
+        }
+    }
+    
+    private func nutritionColor(for key: String) -> Color {
+        switch key.lowercased() {
+        case "calories": return .red
+        case "protein": return .blue
+        case "carbs": return .green
+        case "fat": return .orange
+        case "fiber": return .purple
+        case "sugar": return .pink
+        case "sodium": return .yellow
+        default: return .gray
         }
     }
     
@@ -221,116 +301,5 @@ struct DishAnalysisView: View {
                 }
             }
         }
-    }
-    
-    private func analyzeHealthImpact(for condition: String, dishText: String) -> (impact: String, recommendation: String, severity: ImpactSeverity) {
-        switch condition.lowercased() {
-        case "diabetes":
-            if dishText.contains("sugar") || dishText.contains("sweet") {
-                return (
-                    "High sugar content may affect blood sugar levels",
-                    "Consider sugar-free alternatives or smaller portions",
-                    .negative
-                )
-            } else if dishText.contains("whole grain") || dishText.contains("fiber") {
-                return (
-                    "Good source of fiber and complex carbohydrates",
-                    "This is a good choice for diabetes management",
-                    .positive
-                )
-            }
-            // Check carb content
-            if let carbs = extractNumericValue(from: dishText, key: "carbs"), carbs > 45 {
-                return (
-                    "High carbohydrate content may affect blood sugar",
-                    "Consider reducing portion size or choosing lower-carb options",
-                    .negative
-                )
-            }
-            return (
-                "Moderate impact on blood sugar",
-                "Monitor portion size and pair with protein",
-                .neutral
-            )
-            
-        case "hypertension":
-            if dishText.contains("salt") || dishText.contains("sodium") {
-                return (
-                    "High sodium content may affect blood pressure",
-                    "Request low-sodium preparation or smaller portions",
-                    .negative
-                )
-            } else if dishText.contains("low sodium") || dishText.contains("unsalted") {
-                return (
-                    "Low sodium content is good for blood pressure",
-                    "This is a good choice for hypertension management",
-                    .positive
-                )
-            }
-            // Check sodium content
-            if let sodium = extractNumericValue(from: dishText, key: "sodium"), sodium > 600 {
-                return (
-                    "High sodium content exceeds recommended limits",
-                    "Consider low-sodium alternatives or half portions",
-                    .negative
-                )
-            }
-            return (
-                "Moderate sodium content",
-                "Monitor portion size and avoid adding extra salt",
-                .neutral
-            )
-            
-        case "heart disease":
-            if dishText.contains("fried") || dishText.contains("fatty") {
-                return (
-                    "High in saturated fats may affect heart health",
-                    "Consider grilled or baked alternatives",
-                    .negative
-                )
-            } else if dishText.contains("grilled") || dishText.contains("baked") {
-                return (
-                    "Low in saturated fats, good for heart health",
-                    "This is a good choice for heart health",
-                    .positive
-                )
-            }
-            // Check fat content
-            if let fat = extractNumericValue(from: dishText, key: "fat"), fat > 20 {
-                return (
-                    "High fat content may impact heart health",
-                    "Consider leaner options or smaller portions",
-                    .negative
-                )
-            }
-            return (
-                "Moderate impact on heart health",
-                "Monitor portion size and fat content",
-                .neutral
-            )
-            
-        default:
-            // General health analysis based on nutritional values
-            if let calories = extractNumericValue(from: dishText, key: "calories"), calories > 500 {
-                return (
-                    "High calorie content",
-                    "Consider sharing or saving half for later",
-                    .negative
-                )
-            }
-            return (
-                "General health impact",
-                "Consider your overall dietary needs",
-                .neutral
-            )
-        }
-    }
-
-    private func extractNumericValue(from text: String, key: String) -> Double? {
-        let pattern = "\(key)[^0-9]*([0-9]+)"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
-        guard let match = regex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)) else { return nil }
-        guard let range = Range(match.range(at: 1), in: text) else { return nil }
-        return Double(text[range])
     }
 } 
