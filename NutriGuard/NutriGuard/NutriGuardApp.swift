@@ -9,6 +9,12 @@ import SwiftUI
 
 @main
 struct NutriGuardApp: App {
+    init() {
+        // Ensure a user profile exists at launch
+        if UserProfileManager.shared.userProfile == nil {
+            UserProfileManager.shared.setupDefaultProfile()
+        }
+    }
     var body: some Scene {
         WindowGroup {
             ContentView()

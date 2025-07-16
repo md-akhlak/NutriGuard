@@ -2,149 +2,173 @@ import SwiftUI
 import PhotosUI
 import AVFoundation
 
-struct CameraView: UIViewControllerRepresentable {
-    @Binding var selectedImage: UIImage?
-    @Environment(\.presentationMode) private var presentationMode
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = .camera
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraView
-        
-        init(_ parent: CameraView) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.selectedImage = image
-            }
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-    }
-}
-
 struct HomeView: View {
-    @Environment(\.colorScheme) var colorScheme
-    let userName: String
-    @State private var showCamera = false
-    @State private var showPhotoLibrary = false
-    @State private var showImagePicker = false
-    @State private var showActionSheet = false
+    @State var userName: String
     @State private var selectedImage: UIImage?
+    @State private var showImagePicker = false
+    @State private var showProfileEdit = false
+    @State private var sourceType: UIImagePickerController.SourceType = .camera
+    @State private var showImageSourceOptions = false
     @State private var showMenuAnalysis = false
     
     var body: some View {
-        VStack(spacing: 30) {
-            // Welcome Section
-            VStack(spacing: 15) {
-                Text("Welcome, \(userName)!")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Text("Need help choosing the perfect meal?")
-                    .font(.title3)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            .padding(.top, 50)
-            
-            // Recommendation Card
+        NavigationStack {
             VStack(spacing: 20) {
-                Image(systemName: "fork.knife.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .foregroundColor(.red)
-                
-                Text("Let us help you find the perfect meal that matches your health profile!")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
+                // Profile Card Section
+                Button(action: {
+                    showProfileEdit = true
+                }) {
+                    HStack(spacing: 15) {
+                        // Profile Circle
+                        Circle()
+                            .fill(Color.red.opacity(0.1))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Text(userName.prefix(1).uppercased())
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.red.gradient)
+                            )
+                        
+                        // User Info
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Welcome,")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text(userName)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Chevron
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                    )
                     .padding(.horizontal)
-                
-                Text("Take a photo of the menu or select from your gallery")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(colorScheme == .dark ? Color(.systemGray6) : .white)
-            .cornerRadius(20)
-            .shadow(radius: 5)
-            .padding(.horizontal)
-            
-            Spacer()
-            
-            // Camera Button
-            Button(action: {
-                showActionSheet = true
-            }) {
-                HStack {
-                    Image(systemName: "camera.fill")
-                        .font(.title2)
-                    Text("Scan Menu")
-                        .font(.title3)
-                        .fontWeight(.semibold)
                 }
-                .foregroundColor(.white)
+                
+                // Need help text
+                Text("Need help choosing the perfect meal?")
+                    .font(.title2)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.top, 5)
+                
+                // Menu Analysis Card
+                VStack(spacing: 25) {
+                    // Icon
+                    Circle()
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Image(systemName: "fork.knife")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 40, height: 40)
+                                .foregroundStyle(.red.gradient)
+                        )
+                    
+                    // Text Content
+                    VStack(spacing: 15) {
+                        Text("Let us help you find the perfect meal that matches your health profile!")
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        Text("Take a photo of the menu or select from your gallery")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical, 30)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.red)
-                .cornerRadius(15)
-                .shadow(radius: 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.background)
+                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                )
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                // Scan Menu Button
+                Button(action: {
+                    showImageSourceOptions = true
+                }) {
+                    HStack {
+                        Image(systemName: "camera.fill")
+                            .font(.title3)
+                        Text("Scan Menu")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red.gradient)
+                    .clipShape(Capsule())
+                    .shadow(color: .red.opacity(0.3), radius: 5, y: 3)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 30)
-        }
-        .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showCamera) {
-            CameraView(selectedImage: $selectedImage)
-        }
-        .sheet(isPresented: $showPhotoLibrary) {
-            ImagePicker(selectedImage: $selectedImage, sourceType: .photoLibrary)
-        }
-        .sheet(isPresented: $showMenuAnalysis) {
-            if let image = selectedImage {
-                MenuAnalysisView(menuImage: image)
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(selectedImage: $selectedImage, sourceType: sourceType)
+                    .ignoresSafeArea()
             }
-        }
-        .confirmationDialog("Choose Image Source", isPresented: $showActionSheet) {
-            Button("Take Photo") {
-                showCamera = true
+            .sheet(isPresented: $showProfileEdit) {
+                NavigationStack {
+                    PatientFormView(initialName: userName) { updatedName in
+                        self.userName = updatedName
+                        showProfileEdit = false
+                    }
+                    .navigationTitle("Edit Profile")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Cancel") {
+                                showProfileEdit = false
+                            }
+                        }
+                    }
+                }
             }
-            Button("Choose from Library") {
-                showPhotoLibrary = true
+            .navigationDestination(isPresented: $showMenuAnalysis) {
+                if let image = selectedImage {
+                    MenuAnalysisView(menuImage: image)
+                }
             }
-            Button("Cancel", role: .cancel) {}
-        }
-        .onChange(of: selectedImage) { newImage in
-            if newImage != nil {
-                showMenuAnalysis = true
+            .confirmationDialog("Choose Image Source", isPresented: $showImageSourceOptions) {
+                Button("Take Photo") {
+                    sourceType = .camera
+                    showImagePicker = true
+                }
+                Button("Choose from Library") {
+                    sourceType = .photoLibrary
+                    showImagePicker = true
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .onChange(of: selectedImage) { newImage in
+                if newImage != nil {
+                    showMenuAnalysis = true
+                }
             }
         }
     }
 }
-
 
 #Preview {
     HomeView(userName: "John Doe")

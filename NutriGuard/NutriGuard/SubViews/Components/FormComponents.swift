@@ -146,7 +146,7 @@ struct NavigationButton: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.red)
+                .background(Color.red.gradient)
                 .cornerRadius(10)
         }
     }

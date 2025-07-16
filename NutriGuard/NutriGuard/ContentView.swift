@@ -2,31 +2,39 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var showForm = false
+    @State private var userName: String = UserDefaults.standard.string(forKey: "userName") ?? ""
+    @State private var showHome = false
     
     var body: some View {
-        ZStack {
-            if !showForm {
-                // Splash Screen
-                ZStack {
-                    Color.white
-                        .ignoresSafeArea()
-                    
-                    Image("image")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
+        if !userName.isEmpty {
+            HomeView(userName: userName)
+        } else if showForm {
+            NavigationStack {
+                PatientFormView(initialName: userName) { savedName in
+                    self.userName = savedName
+                    UserDefaults.standard.set(savedName, forKey: "userName")
                 }
-                .onAppear {
-                    // Automatically navigate to form after 2 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation {
-                            showForm = true
-                        }
+                .navigationTitle("Setup Profile")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        } else {
+            // Splash Screen
+            ZStack {
+                Color.white
+                    .ignoresSafeArea()
+                
+                Image("image")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+            }
+            .onAppear {
+                // Automatically navigate to form after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        showForm = true
                     }
                 }
-            } else {
-                // Patient Form
-                PatientFormView()
             }
         }
     }
