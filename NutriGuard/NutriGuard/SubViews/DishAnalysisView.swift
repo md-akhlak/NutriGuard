@@ -6,237 +6,260 @@ struct DishAnalysisView: View {
     @State private var isLoading = true
     @State private var error: Error?
     @Environment(\.dismiss) var dismiss
+    // Image generation state
+    @State private var dishImage: UIImage? = nil
+    @State private var isImageLoading: Bool = false
+    @State private var imageError: String? = nil
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                // Header
-                VStack(spacing: 12) {
-                    Text(menuItem.name)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                        .animation(.easeInOut(duration: 0.5), value: menuItem.name)
-                    HStack(spacing: 8) {
-                        Image(systemName: "fork.knife")
-                            .foregroundStyle(.red.gradient)
-                        Text(menuItem.cuisine)
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.top)
-                
-                if isLoading {
-                    VStack {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text("Analyzing dish...")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 200)
-                } else if let error = error {
-                    VStack(spacing: 15) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.red)
-                        Text("Error analyzing dish: \(error.localizedDescription)")
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                } else if let analysis = analysis {
-                    // Health Status Card
-                    VStack(spacing: 18) {
-                        HStack(spacing: 10) {
-                            Image(systemName: analysis.isHealthy ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.title)
-                                .foregroundStyle(analysis.isHealthy ? Color.green.gradient : Color.red.gradient)
-                            Text(analysis.isHealthy ? "Healthy Choice" : "Consider Alternatives")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(analysis.isHealthy ? .green : .red)
-                        }
-                        Text(analysis.reason)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(analysis.isHealthy ? Color.green.opacity(0.08) : Color.red.opacity(0.08))
-                    )
-                    .transition(.opacity)
-                    
-                    // Health Impacts
-                    if !analysis.healthImpacts.isEmpty {
-                        VStack(alignment: .leading, spacing: 18) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "heart.fill")
-                                    .foregroundStyle(.red.gradient)
-                                Text("Health Impacts")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                            }
-                            
-                            ForEach(analysis.healthImpacts, id: \.self) { impact in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Image(systemName: "exclamationmark.circle.fill")
-                                        .foregroundStyle(.orange.gradient)
-                                    Text(impact)
-                                        .font(.body)
-                                }
-                            }
-                        }
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color.orange.opacity(0.08))
-                        )
-                    }
-                    
-                    // Recommendations
-                    if !analysis.recommendations.isEmpty {
-                        VStack(alignment: .leading, spacing: 18) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lightbulb.fill")
-                                    .foregroundStyle(.yellow.gradient)
-                                Text("Recommendations")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                            }
-                            
-                            ForEach(analysis.recommendations, id: \.self) { recommendation in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundStyle(.blue.gradient)
-                                    Text(recommendation)
-                                        .font(.body)
-                                }
-                            }
-                        }
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color.yellow.opacity(0.08))
-                        )
-                    }
-                    
-                    // Allergens
-                    if !menuItem.allergens.isEmpty {
-                        VStack(alignment: .leading, spacing: 15) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.red.gradient)
-                                Text("Allergens")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                            }
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack {
-                                    ForEach(menuItem.allergens, id: \.self) { allergen in
-                                        HStack {
-                                            Image(systemName: "allergens")
-                                                .foregroundColor(.red)
-                                            Text(allergen)
-                                        }
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.red.opacity(0.1))
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 28) {
+                    // Header Card
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(Color.white.opacity(0.95))
+                            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
+                        VStack(spacing: 12) {
+                            HStack {
+                                Button(action: { dismiss() }) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.title2)
                                         .foregroundColor(.red)
-                                        .clipShape(Capsule())
-                                    }
+                                        .padding(8)
+                                        .background(Color.red.opacity(0.08))
+                                        .clipShape(Circle())
                                 }
+                                Spacer()
                             }
-                        }
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color.red.opacity(0.08))
-                        )
-                    }
-                    
-                    // Nutritional Information
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "chart.bar.fill")
-                                .foregroundStyle(.purple.gradient)
-                            Text("Nutritional Information")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                        }
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 15) {
-                            ForEach(Array(menuItem.nutritionalInfo.keys.sorted()), id: \.self) { key in
-                                VStack {
-                                    HStack {
-                                        Image(systemName: nutritionIcon(for: key))
-                                            .foregroundStyle(nutritionColor(for: key).gradient)
-                                        Text(key)
-                                            .font(.subheadline)
+                            .padding(.top, 8)
+                            .padding(.leading, 8)
+                            // Dish Image
+                            Group {
+                                if isImageLoading {
+                                    ProgressView()
+                                        .scaleEffect(1.2)
+                                        .padding(.top, 8)
+                                } else if let dishImage = dishImage {
+                                    Image(uiImage: dishImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 120, height: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                                        .shadow(radius: 6)
+                                        .padding(.top, 8)
+                                } else if let imageError = imageError {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "photo")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 80, height: 80)
+                                            .foregroundColor(.gray.opacity(0.3))
+                                        Text(imageError)
+                                            .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
-                                    Text(menuItem.nutritionalInfo[key] ?? "")
-                                        .font(.headline)
+                                    .padding(.top, 8)
+                                } else {
+                                    Image(systemName: "photo")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 80, height: 80)
+                                        .foregroundColor(.gray.opacity(0.3))
+                                        .padding(.top, 8)
                                 }
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.purple.opacity(0.08))
-                                )
-                            }
-                        }
-                    }
-                    .padding(18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.purple.opacity(0.08))
-                    )
-                    
-                    // Alternative Options
-                    if !menuItem.alternativeOptions.isEmpty {
-                        VStack(alignment: .leading, spacing: 15) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.triangle.swap")
-                                    .foregroundStyle(.green.gradient)
-                                Text("Alternative Options")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
                             }
                             
-                            ForEach(menuItem.alternativeOptions, id: \.self) { option in
+                            Text(menuItem.name)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .animation(.easeInOut(duration: 0.5), value: menuItem.name)
+                            HStack(spacing: 8) {
+                                Image(systemName: "fork.knife")
+                                    .foregroundStyle(.red.gradient)
+                                Text(menuItem.cuisine)
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.bottom, 16)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
+                    
+                    if isLoading {
+                        VStack(spacing: 18) {
+                            ProgressView()
+                                .scaleEffect(1.7)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .red))
+                            Text("Analyzing dish...")
+                                .foregroundColor(.secondary)
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 220)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.white.opacity(0.9))
+                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                        )
+                        .padding(.horizontal)
+                    } else if let error = error {
+                        VStack(spacing: 18) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.red)
+                            Text("Error analyzing dish: \(error.localizedDescription)")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button(action: { retryAnalysis() }) {
                                 HStack {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundStyle(.blue.gradient)
-                                    Text(option)
-                                        .font(.body)
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Retry")
+                                }
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Color.red.gradient)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 220)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.white.opacity(0.9))
+                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                        )
+                        .padding(.horizontal)
+                    } else if let analysis = analysis {
+                        // Health Status Card
+                        VStack(spacing: 18) {
+                            HStack(spacing: 10) {
+                                Image(systemName: analysis.isHealthy ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .font(.title)
+                                    .foregroundStyle(analysis.isHealthy ? Color.green.gradient : Color.red.gradient)
+                                Text(analysis.isHealthy ? "Healthy Choice" : "Consider Alternatives")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(analysis.isHealthy ? .green : .red)
+                            }
+                            Text(analysis.reason)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(analysis.isHealthy ? Color.green.opacity(0.08) : Color.red.opacity(0.08))
+                                .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
+                        )
+                        .padding(.horizontal)
+                        .transition(.opacity)
+                        
+                        // Health Impacts
+                        if !analysis.healthImpacts.isEmpty {
+                            SectionCard(title: "Health Impacts", icon: "heart.fill", iconColor: .red) {
+                                ForEach(analysis.healthImpacts, id: \.self) { impact in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Image(systemName: "exclamationmark.circle.fill")
+                                            .foregroundStyle(.orange.gradient)
+                                        Text(impact)
+                                            .font(.body)
+                                    }
                                 }
                             }
                         }
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color.green.opacity(0.08))
-                        )
+                        // Recommendations
+                        if !analysis.recommendations.isEmpty {
+                            SectionCard(title: "Recommendations", icon: "lightbulb.fill", iconColor: .yellow) {
+                                ForEach(analysis.recommendations, id: \.self) { recommendation in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .foregroundStyle(.blue.gradient)
+                                        Text(recommendation)
+                                            .font(.body)
+                                    }
+                                }
+                            }
+                        }
+                        // Allergens
+                        if !menuItem.allergens.isEmpty {
+                            SectionCard(title: "Allergens", icon: "exclamationmark.triangle.fill", iconColor: .red) {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack {
+                                        ForEach(menuItem.allergens, id: \.self) { allergen in
+                                            HStack {
+                                                Image(systemName: "allergens")
+                                                    .foregroundColor(.red)
+                                                Text(allergen)
+                                            }
+                                            .font(.subheadline)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.red.opacity(0.1))
+                                            .foregroundColor(.red)
+                                            .clipShape(Capsule())
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Nutritional Information
+                        SectionCard(title: "Nutritional Information", icon: "chart.bar.fill", iconColor: .purple) {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 15) {
+                                ForEach(Array(menuItem.nutritionalInfo.keys.sorted()), id: \.self) { key in
+                                    VStack {
+                                        HStack {
+                                            Image(systemName: nutritionIcon(for: key))
+                                                .foregroundStyle(nutritionColor(for: key).gradient)
+                                            Text(key)
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Text(menuItem.nutritionalInfo[key] ?? "")
+                                            .font(.headline)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.purple.opacity(0.08))
+                                    )
+                                }
+                            }
+                        }
+                        // Alternative Options
+                        if !menuItem.alternativeOptions.isEmpty {
+                            SectionCard(title: "Alternative Options", icon: "arrow.triangle.swap", iconColor: .green) {
+                                ForEach(menuItem.alternativeOptions, id: \.self) { option in
+                                    HStack {
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .foregroundStyle(.blue.gradient)
+                                        Text(option)
+                                            .font(.body)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+                .padding(.bottom, 32)
             }
-            .padding()
+            .padding(.top, 8)
             .animation(.easeInOut(duration: 0.5), value: isLoading)
         }
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            print("🔍 DishAnalysisView appeared for dish: \(menuItem.name)")
             analyzeDish()
+            generateDishImage()
         }
     }
     
@@ -267,6 +290,8 @@ struct DishAnalysisView: View {
     }
     
     private func analyzeDish() {
+        error = nil
+        isLoading = true
         print("📊 Starting dish analysis for: \(menuItem.name)")
         guard let userProfile = MenuImageProcessor.shared.userProfile else {
             print("❌ Error: User profile not found")
@@ -301,5 +326,69 @@ struct DishAnalysisView: View {
                 }
             }
         }
+    }
+    
+    private func retryAnalysis() {
+        analyzeDish()
+    }
+    
+    // MARK: - Dish Image Generation
+    private func generateDishImage() {
+        isImageLoading = true
+        imageError = nil
+        dishImage = nil
+        Task {
+            do {
+                let data = try await GeminiService.shared.generateDishImage(
+                    name: menuItem.name,
+                    description: menuItem.description,
+                    cuisine: menuItem.cuisine
+                )
+                if let data, let uiImage = UIImage(data: data) {
+                    await MainActor.run {
+                        self.dishImage = uiImage
+                        self.isImageLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.imageError = "No image generated."
+                        self.isImageLoading = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.imageError = "Failed to load image."
+                    self.isImageLoading = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - SectionCard Helper
+private struct SectionCard<Content: View>: View {
+    let title: String
+    let icon: String
+    let iconColor: Color
+    let content: () -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundStyle(iconColor.gradient)
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            content()
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
+        )
+        .padding(.horizontal)
     }
 } 

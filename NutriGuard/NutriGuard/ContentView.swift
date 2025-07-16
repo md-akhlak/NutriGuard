@@ -23,7 +23,7 @@ struct ContentView: View {
                 Color.white
                     .ignoresSafeArea()
                 
-                Image("image")
+                Image("SplasScreen")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)

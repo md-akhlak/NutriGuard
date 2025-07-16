@@ -229,4 +229,64 @@ class GeminiService {
         
         return (healthAnalysis, nutritionalInfo)
     }
+
+    // MARK: - Dish Image Generation
+    /// Generates a realistic image of the dish using Gemini API and returns the image data.
+    func generateDishImage(name: String, description: String, cuisine: String) async throws -> Data? {
+        let prompt = """
+        Generate a high-quality, realistic, appetizing food photograph for the following dish. The image should be suitable for a restaurant menu or food delivery app. Do not include any text, watermarks, or logos. The dish should be presented on a clean plate with a neutral background, styled as in professional food photography.
+        
+        Dish Name: \(name)
+        Description: \(description)
+        Cuisine: \(cuisine)
+        
+        Focus on the authentic appearance, colors, and typical presentation of this dish. If the description is missing, use common presentation for this cuisine and dish name.
+        """
+        
+        let imageGenURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=\(apiKey)"
+        guard let url = URL(string: imageGenURL) else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "contents": [
+                [
+                    "parts": [
+                        ["text": prompt]
+                    ]
+                ]
+            ],
+            "generationConfig": [
+                "responseMimeType": "image/png"
+            ]
+        ]
+        let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
+        request.httpBody = jsonData
+        
+        print("🌐 Sending image generation request to Gemini for dish: \(name)")
+        let (responseData, urlResponse) = try await makeRequest(request)
+        guard let httpResponse = urlResponse as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            print("❌ Image generation failed for dish: \(name)")
+            return nil
+        }
+        // Print the full response for debugging
+        if let responseString = String(data: responseData, encoding: .utf8) {
+            print("📥 Gemini image response: \(responseString)")
+        }
+        // The response is expected to be a JSON with a base64-encoded image string
+        guard let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let firstCandidate = candidates.first,
+              let content = firstCandidate["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let firstPart = parts.first,
+              let base64Image = firstPart["inlineData"] as? [String: Any],
+              let imageString = base64Image["data"] as? String,
+              let imageData = Data(base64Encoded: imageString) else {
+            print("❌ Failed to parse image data from Gemini response for dish: \(name)")
+            return nil
+        }
+        return imageData
+    }
 } 
