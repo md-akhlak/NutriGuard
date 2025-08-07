@@ -3,7 +3,6 @@ import SwiftUI
 struct ContentView: View {
     @State private var showForm = false
     @State private var userName: String = UserDefaults.standard.string(forKey: "userName") ?? ""
-    @State private var showHome = false
     
     var body: some View {
         if !userName.isEmpty {
@@ -23,7 +22,7 @@ struct ContentView: View {
                 Color.white
                     .ignoresSafeArea()
                 
-                Image("SplasScreen")
+                Image("SplashScreen")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)

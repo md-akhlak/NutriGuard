@@ -1,15 +1,17 @@
 import SwiftUI
-import PhotosUI
-import AVFoundation
 
 struct HomeView: View {
-    @State var userName: String
+    @State private var userName: String
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
     @State private var showProfileEdit = false
     @State private var sourceType: UIImagePickerController.SourceType = .camera
     @State private var showImageSourceOptions = false
     @State private var showMenuAnalysis = false
+    
+    init(userName: String) {
+        self._userName = State(initialValue: userName)
+    }
     
     var body: some View {
         NavigationStack {
@@ -161,7 +163,7 @@ struct HomeView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
-            .onChange(of: selectedImage) { newImage in
+            .onChange(of: selectedImage) { oldImage, newImage in
                 if newImage != nil {
                     showMenuAnalysis = true
                 }

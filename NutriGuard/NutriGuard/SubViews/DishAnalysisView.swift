@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DishAnalysisView: View {
-    @State var menuItem: MenuItem
+    @State private var menuItem: MenuItem
     @State private var analysis: HealthAnalysis?
     @State private var isLoading = true
     @State private var error: Error?
@@ -10,6 +10,10 @@ struct DishAnalysisView: View {
     @State private var dishImage: UIImage? = nil
     @State private var isImageLoading: Bool = false
     @State private var imageError: String? = nil
+    
+    init(menuItem: MenuItem) {
+        self._menuItem = State(initialValue: menuItem)
+    }
     
     var body: some View {
         ZStack {
