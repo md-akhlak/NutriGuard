@@ -19,7 +19,7 @@ struct HealthImpact: Identifiable {
     let severity: ImpactSeverity
 }
 
-enum ImpactSeverity: String {
+enum ImpactSeverity: String, CaseIterable {
     case positive = "Positive"
     case neutral = "Neutral"
     case negative = "Negative"

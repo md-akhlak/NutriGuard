@@ -2,7 +2,7 @@ import Foundation
 
 class GeminiService {
     static let shared = GeminiService()
-    private let apiKey = "AIzaSyD5r7Vkkdqkq7LbX4oVIrlCM_oRdVLzFRc"
+    private let apiKey: String
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
     
     // Rate limiting properties
@@ -12,6 +12,16 @@ class GeminiService {
     private let minTimeBetweenRequests: TimeInterval = 1.0 // 1 second between requests
     
     private init() {
+        // Get API key from environment or configuration
+        if let envApiKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] {
+            self.apiKey = envApiKey
+        } else if let bundleApiKey = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String {
+            self.apiKey = bundleApiKey
+        } else {
+            // Fallback - in production, this should be loaded from secure storage
+            self.apiKey = "YOUR_API_KEY_HERE"
+            print("⚠️ Warning: Using placeholder API key. Please configure GEMINI_API_KEY properly.")
+        }
         print("🚀 GeminiService initialized")
     }
     
@@ -35,12 +45,15 @@ class GeminiService {
             try await waitForNextRequestWindow()
             let (data, response) = try await URLSession.shared.data(for: request)
             
-            // Print response headers for debugging
+            // Check response status for debugging
             if let httpResponse = response as? HTTPURLResponse {
                 print("📡 Response Status Code: \(httpResponse.statusCode)")
-                print("📡 Response Headers:")
-                for (key, value) in httpResponse.allHeaderFields {
-                    print("   \(key): \(value)")
+                // Detailed headers only for errors
+                if httpResponse.statusCode != 200 {
+                    print("📡 Response Headers:")
+                    for (key, value) in httpResponse.allHeaderFields {
+                        print("   \(key): \(value)")
+                    }
                 }
             }
             
@@ -135,10 +148,12 @@ class GeminiService {
             throw NSError(domain: "GeminiService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response type"])
         }
         
-        // Print response data for debugging
+        // Print response data only for debugging errors
         print("📥 Response Status Code: \(httpResponse.statusCode)")
-        if let responseString = String(data: responseData, encoding: .utf8) {
-            print("📥 Response Data: \(responseString)")
+        if httpResponse.statusCode != 200 {
+            if let responseString = String(data: responseData, encoding: .utf8) {
+                print("📥 Response Data: \(responseString)")
+            }
         }
         
         guard httpResponse.statusCode == 200 else {
